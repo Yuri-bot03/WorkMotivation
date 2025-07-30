@@ -7,15 +7,50 @@ const hoursPerDay = 8;                 // Standard hours for computing hourly ra
 const hourlyRate = monthlySalary / workingDaysPerMonth / hoursPerDay;
 const nightDiffRate = 0.18;            // Night shift premium (applies 10 PM–6 AM)
 const overtimeMultiplier = 1.25;       // Weekday overtime premium【116724529657621†L175-L179】
-const deMinimisMonthly = 2800;         // De minimis allowance (paid on the 15th)
+// A de minimis allowance exists but is no longer displayed on the
+// real‑time dashboard.  It is applied only in semi‑monthly calendar totals.
+const deMinimisMonthly = 2800;
 
 // Shift configuration
 const paidShiftHours = 9;              // Total paid hours per shift (8 regular + 1 extra)
 const breakDurationHours = 1;          // Unpaid break during the shift
 
+// Grace period in minutes beyond the scheduled 8 AM end time.  If the end
+// shift button is not clicked by 8:00 AM, up to this many additional
+// minutes will still be counted as regular time before overtime applies.
+const gracePeriodMinutes = 15;
+
 // Variables to manage manual shift end
 let shiftEnded = false;
 let endedElapsedHours = 0;
+
+// Object mapping weekday dates (YYYY‑MM‑DD) to actual earnings recorded when
+// the shift is ended.  This allows the calendar to display the real
+// earnings for each weekday once the user clicks End Shift.  The state
+// is persisted in localStorage under the key 'completedWeekdayEarnings'.
+let completedWeekdayEarnings = {};
+
+function loadCompletedWeekdayEarnings() {
+  try {
+    const data = localStorage.getItem('completedWeekdayEarnings');
+    if (data) {
+      const obj = JSON.parse(data);
+      if (obj && typeof obj === 'object') {
+        completedWeekdayEarnings = obj;
+      }
+    }
+  } catch (e) {
+    // Ignore parse errors
+  }
+}
+
+function saveCompletedWeekdayEarnings() {
+  try {
+    localStorage.setItem('completedWeekdayEarnings', JSON.stringify(completedWeekdayEarnings));
+  } catch (e) {
+    // Ignore storage errors
+  }
+}
 
 // Object mapping weekend dates (YYYY‑MM‑DD) to work details.  Each entry
 // stores { hours: number, startTime: 'HH:MM' }.  This allows spontaneous
@@ -155,6 +190,12 @@ function calculateDailyEarningsForDate(date) {
     return calculateWeekendEarnings(hours, startTime);
   }
   // Weekday dates: use fixed paid shift hours
+  // If the shift for this date has been completed and recorded, return the
+  // stored value; otherwise compute the expected earnings for a full 9‑hour
+  // shift (including night differential).
+  if (completedWeekdayEarnings.hasOwnProperty(dateStr)) {
+    return completedWeekdayEarnings[dateStr];
+  }
   const base = hourlyRate * paidShiftHours;
   const nightHoursForDaily = Math.min(paidShiftHours, 8);
   const night = hourlyRate * nightDiffRate * nightHoursForDaily;
@@ -349,8 +390,9 @@ function renderCalendar(period, titleId, gridId, totalId) {
  * updates the period totals.
  */
 function renderCalendars() {
-  // Ensure workedWeekendSet is initialized from storage
+  // Load persisted data for weekend work and completed weekday earnings
   loadWorkedWeekendDates();
+  loadCompletedWeekdayEarnings();
   renderCalendar(1, 'calendar-title-1', 'calendar-grid-1', 'period-total-1');
   renderCalendar(2, 'calendar-title-2', 'calendar-grid-2', 'period-total-2');
 }
@@ -367,9 +409,10 @@ function updateDisplay() {
   const effectiveElapsedHours = shiftEnded ? endedElapsedHours : elapsedHours;
   // Subtract unpaid break
   const paidHoursWorked = Math.max(effectiveElapsedHours - breakDurationHours, 0);
-  // Determine base and overtime hours relative to the scheduled paid shift
-  const baseHours = Math.min(paidHoursWorked, paidShiftHours);
-  const overtimeHours = Math.max(paidHoursWorked - paidShiftHours, 0);
+  // Allow a grace period beyond the scheduled 9 paid hours before overtime applies
+  const maxPaidHoursNoOT = paidShiftHours + gracePeriodMinutes / 60;
+  const baseHours = Math.min(paidHoursWorked, maxPaidHoursNoOT);
+  const overtimeHours = Math.max(paidHoursWorked - maxPaidHoursNoOT, 0);
   // Detect if the shift started on a weekend (Saturday or Sunday)
   const isWeekend = shiftStart.getDay() === 0 || shiftStart.getDay() === 6;
   let baseEarnings;
@@ -405,12 +448,8 @@ function updateDisplay() {
   document.getElementById('night-earnings').textContent = formatMoney(nightEarnings);
   document.getElementById('mid-earnings').textContent = formatMoney(midEarnings);
   document.getElementById('ot-earnings').textContent = formatMoney(overtimeEarnings);
-  document.getElementById('allowance-earnings').textContent = formatMoney(allowanceEarnings);
+  // Update DOM elements (allowance and semi‑monthly metrics have been removed)
   document.getElementById('total-earnings').textContent = formatMoney(total);
-  // Update semi‑monthly pay display
-  const { pay1, pay2 } = calculateSemiMonthlyPay();
-  document.getElementById('semi-1').textContent = formatMoney(pay1);
-  document.getElementById('semi-2').textContent = formatMoney(pay2);
 }
 
 // Initialize display and update every second
@@ -428,9 +467,39 @@ document.addEventListener('DOMContentLoaded', () => {
       if (!shiftEnded) {
         const now = getPhilippinesTime();
         const start = getShiftStart(now);
+        // Record elapsed hours up to this moment
         endedElapsedHours = Math.max((now.getTime() - start.getTime()) / (1000 * 60 * 60), 0);
         shiftEnded = true;
         endShiftBtn.disabled = true;
+        // Compute final earnings for the shift and record them for the calendar if it is a weekday
+        const paidHours = Math.max(endedElapsedHours - breakDurationHours, 0);
+        const maxHours = paidShiftHours + gracePeriodMinutes / 60;
+        const baseHrs = Math.min(paidHours, maxHours);
+        const otHrs = Math.max(paidHours - maxHours, 0);
+        const weekend = start.getDay() === 0 || start.getDay() === 6;
+        let basePay, otPay;
+        if (weekend) {
+          // Rest‑day pay: first 8 hours at 130%, beyond 8 at 169%
+          const weekendBaseHours = Math.min(baseHrs, 8);
+          const weekendExtraHours = Math.max(baseHrs - 8, 0);
+          basePay = hourlyRate * 1.3 * weekendBaseHours + hourlyRate * 1.69 * weekendExtraHours;
+          otPay = hourlyRate * 1.69 * otHrs;
+        } else {
+          basePay = hourlyRate * baseHrs;
+          otPay = hourlyRate * overtimeMultiplier * otHrs;
+        }
+        const nightHrs = Math.min(baseHrs + otHrs, 8);
+        const nightPay = hourlyRate * nightDiffRate * nightHrs;
+        const midPay = 0;
+        const totalPay = basePay + nightPay + midPay + otPay;
+        // Record earnings only for weekday dates; weekend days are handled via manual entry
+        if (!weekend) {
+          const dateStr = start.toISOString().split('T')[0];
+          completedWeekdayEarnings[dateStr] = totalPay;
+          saveCompletedWeekdayEarnings();
+        }
+        // Re-render calendars to reflect recorded earnings
+        renderCalendars();
       }
     });
   }

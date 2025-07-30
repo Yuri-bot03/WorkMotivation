@@ -127,11 +127,17 @@ h1 {
 /* The calendar wrapper now holds a single calendar block instead of two.
    It still flexes to take up the remaining horizontal space beside the
    earnings section, but it does not wrap its children horizontally. */
+/* Calendar wrapper now has a maximum width so it doesn't sprawl across
+   the page.  It still flexes to take up available space beside the
+   earnings section, but is capped to a reasonable width. */
 .calendar-wrapper {
   margin-top: 0;
   display: flex;
   flex-direction: column;
   flex: 1 1 0;
+  max-width: 650px;
+  width: 100%;
+  margin-left: 2rem;
 }
 
 /* Calendar block styling.  The `.single` modifier indicates this block
