@@ -59,15 +59,23 @@
     <button id="end-shift-btn">End Shift</button>
     <p class="footer">Based on a monthly salary of ₱28,000, a night shift premium of 18%, and overtime at 25% of the hourly rate.</p>
 
-    <!-- Calendar section showing daily earnings for the current pay period.  The
-         calendar header displays the month and year, and each day cell
-         contains the date.  When hovering over a day, a tooltip will
-         reveal the estimated earnings for that date (including weekend
-         premiums where applicable).  The calendar is rendered via
-         JavaScript based on the current semi‑monthly period. -->
-    <div class="calendar-section">
-      <h2 id="calendar-title"></h2>
-      <div class="calendar-grid" id="calendar-grid"></div>
+    <!-- Calendar wrapper contains two semi‑monthly calendars side by side.  Each
+         calendar shows the current month’s dates for its pay period (1–15
+         and 16–end), displays estimated earnings on hover, and allows
+         toggling weekend work by clicking on weekend cells.  The totals
+         beneath each calendar summarize the expected earnings for that
+         period based on selected weekend work. -->
+    <div class="calendar-wrapper">
+      <div class="calendar-block">
+        <h2 id="calendar-title-1"></h2>
+        <div class="calendar-grid" id="calendar-grid-1"></div>
+        <div class="period-total">Period Total: <span id="period-total-1">₱0.00</span></div>
+      </div>
+      <div class="calendar-block">
+        <h2 id="calendar-title-2"></h2>
+        <div class="calendar-grid" id="calendar-grid-2"></div>
+        <div class="period-total">Period Total: <span id="period-total-2">₱0.00</span></div>
+      </div>
     </div>
   </div>
   <script src="script.js"></script>

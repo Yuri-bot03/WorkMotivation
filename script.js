@@ -17,6 +17,34 @@ const breakDurationHours = 1;          // Unpaid break during the shift
 let shiftEnded = false;
 let endedElapsedHours = 0;
 
+// Set of weekend dates (YYYY‑MM‑DD strings) that have been marked as worked.
+// This allows spontaneous weekend work to be toggled on the calendar.  The
+// state is persisted in localStorage under the key 'workedWeekendDates'.
+let workedWeekendSet = new Set();
+
+function loadWorkedWeekendDates() {
+  try {
+    const data = localStorage.getItem('workedWeekendDates');
+    if (data) {
+      const arr = JSON.parse(data);
+      if (Array.isArray(arr)) {
+        workedWeekendSet = new Set(arr);
+      }
+    }
+  } catch (e) {
+    // Ignore parse errors
+  }
+}
+
+function saveWorkedWeekendDates() {
+  try {
+    const arr = Array.from(workedWeekendSet);
+    localStorage.setItem('workedWeekendDates', JSON.stringify(arr));
+  } catch (e) {
+    // Ignore storage errors
+  }
+}
+
 /**
  * Returns the current date/time in the Asia/Manila timezone.
  * Uses Intl API to ensure calculations reflect Philippine local time.
@@ -87,18 +115,16 @@ function formatMoney(value) {
 }
 
 /**
- * Returns an array of Date objects representing the current semi‑monthly pay
- * period.  If today’s date is on or before the 15th, the period runs from
- * the 1st to the 15th; otherwise it runs from the 16th to the last day
- * of the month.
+ * Returns an array of Date objects for a specified pay period in the current month.
+ * period = 1 returns dates from 1st to 15th; period = 2 returns 16th to end of month.
  */
-function getCurrentPayPeriodDates() {
+function getPayPeriodDates(period) {
   const now = getPhilippinesTime();
   const year = now.getFullYear();
   const month = now.getMonth();
-  let startDay = 1;
-  let endDay;
-  if (now.getDate() <= 15) {
+  let startDay, endDay;
+  if (period === 1) {
+    startDay = 1;
     endDay = 15;
   } else {
     startDay = 16;
@@ -118,6 +144,11 @@ function getCurrentPayPeriodDates() {
  */
 function calculateDailyEarningsForDate(date) {
   const isWeekend = date.getDay() === 0 || date.getDay() === 6;
+  const dateStr = date.toISOString().split('T')[0];
+  // If weekend and not marked as worked, earnings are zero
+  if (isWeekend && !workedWeekendSet.has(dateStr)) {
+    return 0;
+  }
   let base;
   if (isWeekend) {
     const weekendBaseHours = Math.min(paidShiftHours, 8);
@@ -138,17 +169,18 @@ function calculateDailyEarningsForDate(date) {
  * calculated via calculateDailyEarningsForDate().  The current day is
  * highlighted.
  */
-function renderCalendar() {
-  const calendarGrid = document.getElementById('calendar-grid');
-  const calendarTitleEl = document.getElementById('calendar-title');
-  if (!calendarGrid || !calendarTitleEl) return;
-  const dates = getCurrentPayPeriodDates();
+function renderCalendar(period, titleId, gridId, totalId) {
+  const calendarGrid = document.getElementById(gridId);
+  const calendarTitleEl = document.getElementById(titleId);
+  const totalEl = document.getElementById(totalId);
+  if (!calendarGrid || !calendarTitleEl || !totalEl) return;
+  const dates = getPayPeriodDates(period);
   if (dates.length === 0) return;
   const firstDate = dates[0];
   const options = { month: 'long', year: 'numeric' };
   calendarTitleEl.textContent = firstDate.toLocaleDateString('en-US', options);
   calendarGrid.innerHTML = '';
-  // Add day of week labels
+  // Day labels
   const dayNames = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
   dayNames.forEach(name => {
     const label = document.createElement('div');
@@ -156,7 +188,7 @@ function renderCalendar() {
     label.textContent = name;
     calendarGrid.appendChild(label);
   });
-  // Offset to align first date with correct weekday (Monday‑based)
+  // Offset for alignment (Monday as first column)
   const offset = (firstDate.getDay() + 6) % 7;
   for (let i = 0; i < offset; i++) {
     const empty = document.createElement('div');
@@ -165,20 +197,57 @@ function renderCalendar() {
     calendarGrid.appendChild(empty);
   }
   const today = getPhilippinesTime();
+  let periodTotal = 0;
   dates.forEach(dateObj => {
+    const dateStr = dateObj.toISOString().split('T')[0];
     const earnings = calculateDailyEarningsForDate(dateObj);
+    periodTotal += earnings;
     const cell = document.createElement('div');
     cell.className = 'calendar-day';
+    // Highlight current day
     if (dateObj.toDateString() === today.toDateString()) {
       cell.classList.add('today');
     }
+    // Mark weekend cells that are worked
+    const isWeekend = dateObj.getDay() === 0 || dateObj.getDay() === 6;
+    if (isWeekend && workedWeekendSet.has(dateStr)) {
+      cell.classList.add('worked');
+    }
     cell.textContent = dateObj.getDate();
+    cell.dataset.date = dateStr;
     const tooltip = document.createElement('span');
     tooltip.className = 'tooltip';
     tooltip.textContent = `₱${earnings.toFixed(2)}`;
     cell.appendChild(tooltip);
+    // Click handler to toggle weekend work
+    if (isWeekend) {
+      cell.style.cursor = 'pointer';
+      cell.addEventListener('click', () => {
+        if (workedWeekendSet.has(dateStr)) {
+          workedWeekendSet.delete(dateStr);
+        } else {
+          workedWeekendSet.add(dateStr);
+        }
+        saveWorkedWeekendDates();
+        renderCalendars();
+      });
+    }
     calendarGrid.appendChild(cell);
   });
+  // Update total display for this period
+  totalEl.textContent = `₱${periodTotal.toFixed(2)}`;
+}
+
+/**
+ * Render both semi‑monthly calendars.  This function reads the list of worked
+ * weekend dates from localStorage, then regenerates each calendar and
+ * updates the period totals.
+ */
+function renderCalendars() {
+  // Ensure workedWeekendSet is initialized from storage
+  loadWorkedWeekendDates();
+  renderCalendar(1, 'calendar-title-1', 'calendar-grid-1', 'period-total-1');
+  renderCalendar(2, 'calendar-title-2', 'calendar-grid-2', 'period-total-2');
 }
 
 /**
@@ -261,6 +330,7 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   }
 
-  // Render the pay‑period calendar once the DOM is ready
-  renderCalendar();
+  // Load worked weekend dates from storage and render both pay‑period calendars
+  loadWorkedWeekendDates();
+  renderCalendars();
 });

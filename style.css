@@ -99,6 +99,40 @@ h1 {
   margin-top: 2rem;
 }
 
+/* Wrapper for two calendars displayed side by side on larger screens.
+   Falls back to vertical stacking on narrow viewports. */
+.calendar-wrapper {
+  margin-top: 2rem;
+  display: flex;
+  gap: 1rem;
+  flex-wrap: wrap;
+  justify-content: space-between;
+}
+
+.calendar-block {
+  background-color: #f9fafb; /* gray‑50 */
+  border-radius: 10px;
+  padding: 1rem;
+  flex: 1 1 45%;
+  min-width: 220px;
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.05);
+}
+
+/* Total summary beneath each calendar */
+.period-total {
+  margin-top: 0.5rem;
+  font-size: 0.8rem;
+  color: #4b5563; /* gray‑600 */
+  text-align: right;
+}
+
+/* Highlight weekend cells marked as worked */
+.calendar-day.worked {
+  background-color: #c7d2fe; /* indigo‑200 */
+  border: 1px solid #a5b4fc; /* indigo‑300 */
+  color: #1e3a8a; /* indigo‑800 */
+}
+
 #calendar-title {
   font-size: 1.2rem;
   font-weight: 600;
