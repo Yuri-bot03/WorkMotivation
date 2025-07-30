@@ -16,9 +16,31 @@ body {
   backdrop-filter: blur(6px);
   border-radius: 12px;
   padding: 2rem 3rem;
-  max-width: 500px;
-  width: 90%;
+  /* Increase the maximum width to accommodate side‑by‑side layout */
+  max-width: 1200px;
+  width: 95%;
   box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
+}
+
+/* Wrapper for the earnings card and calendars.  Uses flexbox so that on
+   medium to large screens the calculator appears on the left and the
+   calendars on the right.  On smaller viewports it will wrap and stack. */
+.content-wrapper {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 2rem;
+}
+
+/* Left panel containing the heading, metrics, end shift button and
+   explanatory footer.  It flexes to occupy roughly 40% of the container
+   on wide screens and expands on narrower screens. */
+/* Fix the earnings section to a reasonable width so the calendar has
+   sufficient space.  The flex-basis defines its preferred size; it will
+   not shrink below this width unless the viewport is too narrow, in
+   which case the layout will wrap. */
+.earnings-section {
+  flex: 0 0 320px;
+  min-width: 280px;
 }
 
 h1 {
@@ -95,17 +117,19 @@ h1 {
 }
 
 /* Calendar styles */
-.calendar-section {
-  margin-top: 2rem;
-}
 
-/* Wrapper for two calendars displayed side by side on larger screens.
-   Falls back to vertical stacking on narrow viewports. */
+/* Remove the top margin from the calendar wrapper because it is positioned
+   beside the earnings section in the flex container.  A gap between
+   sections is provided via .content-wrapper instead. */
+/* Calendar wrapper takes up the remaining space beside the fixed-width
+   earnings section.  It grows as needed and wraps its internal
+   calendar blocks when the viewport is narrow. */
 .calendar-wrapper {
-  margin-top: 2rem;
+  margin-top: 0;
   display: flex;
-  gap: 1rem;
   flex-wrap: wrap;
+  gap: 1rem;
+  flex: 1 1 0;
   justify-content: space-between;
 }
 

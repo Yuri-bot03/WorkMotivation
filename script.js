@@ -17,18 +17,19 @@ const breakDurationHours = 1;          // Unpaid break during the shift
 let shiftEnded = false;
 let endedElapsedHours = 0;
 
-// Set of weekend dates (YYYY‑MM‑DD strings) that have been marked as worked.
-// This allows spontaneous weekend work to be toggled on the calendar.  The
-// state is persisted in localStorage under the key 'workedWeekendDates'.
-let workedWeekendSet = new Set();
+// Object mapping weekend dates (YYYY‑MM‑DD) to work details.  Each entry
+// stores { hours: number, startTime: 'HH:MM' }.  This allows spontaneous
+// weekend shifts of varying length and start times.  The state is persisted
+// in localStorage under the key 'workedWeekendDetails'.
+let workedWeekendDetails = {};
 
 function loadWorkedWeekendDates() {
   try {
-    const data = localStorage.getItem('workedWeekendDates');
+    const data = localStorage.getItem('workedWeekendDetails');
     if (data) {
-      const arr = JSON.parse(data);
-      if (Array.isArray(arr)) {
-        workedWeekendSet = new Set(arr);
+      const obj = JSON.parse(data);
+      if (obj && typeof obj === 'object') {
+        workedWeekendDetails = obj;
       }
     }
   } catch (e) {
@@ -38,8 +39,7 @@ function loadWorkedWeekendDates() {
 
 function saveWorkedWeekendDates() {
   try {
-    const arr = Array.from(workedWeekendSet);
-    localStorage.setItem('workedWeekendDates', JSON.stringify(arr));
+    localStorage.setItem('workedWeekendDetails', JSON.stringify(workedWeekendDetails));
   } catch (e) {
     // Ignore storage errors
   }
@@ -145,18 +145,17 @@ function getPayPeriodDates(period) {
 function calculateDailyEarningsForDate(date) {
   const isWeekend = date.getDay() === 0 || date.getDay() === 6;
   const dateStr = date.toISOString().split('T')[0];
-  // If weekend and not marked as worked, earnings are zero
-  if (isWeekend && !workedWeekendSet.has(dateStr)) {
-    return 0;
-  }
-  let base;
+  // Weekend dates: compute earnings only if details exist; otherwise zero
   if (isWeekend) {
-    const weekendBaseHours = Math.min(paidShiftHours, 8);
-    const weekendExtraHours = Math.max(paidShiftHours - 8, 0);
-    base = hourlyRate * 1.3 * weekendBaseHours + hourlyRate * 1.69 * weekendExtraHours;
-  } else {
-    base = hourlyRate * paidShiftHours;
+    const details = workedWeekendDetails[dateStr];
+    if (!details) {
+      return 0;
+    }
+    const { hours, startTime } = details;
+    return calculateWeekendEarnings(hours, startTime);
   }
+  // Weekday dates: use fixed paid shift hours
+  const base = hourlyRate * paidShiftHours;
   const nightHoursForDaily = Math.min(paidShiftHours, 8);
   const night = hourlyRate * nightDiffRate * nightHoursForDaily;
   return base + night;
@@ -208,9 +207,9 @@ function renderCalendar(period, titleId, gridId, totalId) {
     if (dateObj.toDateString() === today.toDateString()) {
       cell.classList.add('today');
     }
-    // Mark weekend cells that are worked
+    // Mark weekend cells that are worked (i.e., have details)
     const isWeekend = dateObj.getDay() === 0 || dateObj.getDay() === 6;
-    if (isWeekend && workedWeekendSet.has(dateStr)) {
+    if (isWeekend && workedWeekendDetails[dateStr]) {
       cell.classList.add('worked');
     }
     cell.textContent = dateObj.getDate();
@@ -219,15 +218,55 @@ function renderCalendar(period, titleId, gridId, totalId) {
     tooltip.className = 'tooltip';
     tooltip.textContent = `₱${earnings.toFixed(2)}`;
     cell.appendChild(tooltip);
-    // Click handler to toggle weekend work
+    // Click handler to manage weekend work details.  When a weekend cell
+    // is clicked, prompt the user to enter the number of hours worked and
+    // the shift start time.  Leaving the hours blank will remove the entry.
     if (isWeekend) {
       cell.style.cursor = 'pointer';
       cell.addEventListener('click', () => {
-        if (workedWeekendSet.has(dateStr)) {
-          workedWeekendSet.delete(dateStr);
+        const existing = workedWeekendDetails[dateStr];
+        let hours, startTime;
+        if (existing) {
+          // If already present, ask if the user wants to remove or update
+          const remove = window.confirm('This weekend entry is already recorded. Click OK to remove it, or Cancel to edit the details.');
+          if (remove) {
+            delete workedWeekendDetails[dateStr];
+            saveWorkedWeekendDates();
+            renderCalendars();
+            return;
+          } else {
+            hours = prompt('Enter hours worked for ' + dateStr + ' (e.g., 5.5):', existing.hours);
+            if (hours === null) return; // Cancel editing
+            hours = parseFloat(hours);
+            if (isNaN(hours) || hours <= 0) {
+              alert('Invalid hours. Please enter a positive number.');
+              return;
+            }
+            startTime = prompt('Enter shift start time (HH:MM, 24‑hour) for ' + dateStr + ':', existing.startTime);
+            if (startTime === null) return;
+            // Basic validation of HH:MM
+            if (!/^\d{1,2}:\d{2}$/.test(startTime)) {
+              alert('Invalid time format. Please use HH:MM in 24‑hour format.');
+              return;
+            }
+          }
         } else {
-          workedWeekendSet.add(dateStr);
+          hours = prompt('Enter hours worked for ' + dateStr + ' (e.g., 5.5):', '8');
+          if (hours === null) return;
+          hours = parseFloat(hours);
+          if (isNaN(hours) || hours <= 0) {
+            alert('Invalid hours. Please enter a positive number.');
+            return;
+          }
+          startTime = prompt('Enter shift start time (HH:MM, 24‑hour) for ' + dateStr + ':', '08:00');
+          if (startTime === null) return;
+          if (!/^\d{1,2}:\d{2}$/.test(startTime)) {
+            alert('Invalid time format. Please use HH:MM in 24‑hour format.');
+            return;
+          }
         }
+        // Save updated details
+        workedWeekendDetails[dateStr] = { hours, startTime };
         saveWorkedWeekendDates();
         renderCalendars();
       });

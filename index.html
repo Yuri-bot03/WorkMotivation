@@ -8,9 +8,13 @@
 </head>
 <body>
   <div class="container">
-    <h1>Real‑Time Earnings Calculator</h1>
-    <p class="description">Track your earnings in real time based on your night shift schedule.</p>
-    <div id="earnings-display">
+    <!-- The content wrapper arranges the earnings section and calendar section
+         side by side on larger screens and stacks them on smaller screens. -->
+    <div class="content-wrapper">
+      <div class="earnings-section">
+        <h1>Real‑Time Earnings Calculator</h1>
+        <p class="description">Track your earnings in real time based on your night shift schedule.</p>
+        <div id="earnings-display">
       <div class="metric">
         <span class="label">Time Worked:</span>
         <span id="time-worked" class="value">0h 0m 0s</span>
@@ -52,29 +56,27 @@
         <span class="label">Total Earnings:</span>
         <span id="total-earnings" class="value">₱0.00</span>
       </div>
-    </div>
-    <!-- End shift button allows the user to explicitly finish the shift. If left unclicked past
-         the scheduled 8 AM end time, any additional paid hours will be treated as overtime.
-         The button will disable itself once clicked to prevent multiple endings. -->
-    <button id="end-shift-btn">End Shift</button>
-    <p class="footer">Based on a monthly salary of ₱28,000, a night shift premium of 18%, and overtime at 25% of the hourly rate.</p>
-
-    <!-- Calendar wrapper contains two semi‑monthly calendars side by side.  Each
-         calendar shows the current month’s dates for its pay period (1–15
-         and 16–end), displays estimated earnings on hover, and allows
-         toggling weekend work by clicking on weekend cells.  The totals
-         beneath each calendar summarize the expected earnings for that
-         period based on selected weekend work. -->
-    <div class="calendar-wrapper">
-      <div class="calendar-block">
-        <h2 id="calendar-title-1"></h2>
-        <div class="calendar-grid" id="calendar-grid-1"></div>
-        <div class="period-total">Period Total: <span id="period-total-1">₱0.00</span></div>
+        </div>
+        <!-- End shift button allows the user to explicitly finish the shift. If left unclicked past
+             the scheduled 8 AM end time, any additional paid hours will be treated as overtime.
+             The button will disable itself once clicked to prevent multiple endings. -->
+        <button id="end-shift-btn">End Shift</button>
+        <p class="footer">Based on a monthly salary of ₱28,000, a night shift premium of 18%, and overtime at 25% of the hourly rate.</p>
       </div>
-      <div class="calendar-block">
-        <h2 id="calendar-title-2"></h2>
-        <div class="calendar-grid" id="calendar-grid-2"></div>
-        <div class="period-total">Period Total: <span id="period-total-2">₱0.00</span></div>
+      <!-- The calendar wrapper contains two semi‑monthly calendars.  It sits
+           beside the earnings section on wide screens and below it on
+           narrow screens. -->
+      <div class="calendar-wrapper">
+        <div class="calendar-block">
+          <h2 id="calendar-title-1"></h2>
+          <div class="calendar-grid" id="calendar-grid-1"></div>
+          <div class="period-total">Period Total: <span id="period-total-1">₱0.00</span></div>
+        </div>
+        <div class="calendar-block">
+          <h2 id="calendar-title-2"></h2>
+          <div class="calendar-grid" id="calendar-grid-2"></div>
+          <div class="period-total">Period Total: <span id="period-total-2">₱0.00</span></div>
+        </div>
       </div>
     </div>
   </div>
