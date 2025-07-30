@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Real‑Time Earnings Calculator</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <div class="container">
+    <h1>Real‑Time Earnings Calculator</h1>
+    <p class="description">Track your earnings in real time based on your night shift schedule.</p>
+    <div id="earnings-display">
+      <div class="metric">
+        <span class="label">Time Worked:</span>
+        <span id="time-worked" class="value">0h 0m 0s</span>
+      </div>
+      <div class="metric">
+        <span class="label">Base Earnings:</span>
+        <span id="base-earnings" class="value">₱0.00</span>
+      </div>
+      <div class="metric">
+        <span class="label">Night Shift Premium:</span>
+        <span id="night-earnings" class="value">₱0.00</span>
+      </div>
+      <div class="metric">
+        <span class="label">Mid Shift Premium:</span>
+        <span id="mid-earnings" class="value">₱0.00</span>
+      </div>
+      <div class="metric">
+        <span class="label">Overtime Earnings:</span>
+        <span id="ot-earnings" class="value">₱0.00</span>
+      </div>
+      <div class="metric">
+        <span class="label">Allowance (De&nbsp;Minimis):</span>
+        <span id="allowance-earnings" class="value">₱0.00</span>
+      </div>
+      <div class="metric total">
+        <span class="label">Total Earnings:</span>
+        <span id="total-earnings" class="value">₱0.00</span>
+      </div>
+    </div>
+    <p class="footer">Based on a monthly salary of ₱28,000, a night shift premium of 18%, and overtime at 25% of the hourly rate.</p>
+  </div>
+  <script src="script.js"></script>
+</body>
+</html>
