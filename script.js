@@ -24,6 +24,11 @@ const gracePeriodMinutes = 15;
 let shiftEnded = false;
 let endedElapsedHours = 0;
 
+// Flag to ensure automatic recording is performed only once when the page
+// detects that the grace period has passed or the page is closing.  This
+// prevents duplicate entries in the calendar.
+let autoRecorded = false;
+
 // Object mapping weekday dates (YYYY‑MM‑DD) to actual earnings recorded when
 // the shift is ended.  This allows the calendar to display the real
 // earnings for each weekday once the user clicks End Shift.  The state
@@ -79,6 +84,76 @@ function saveWorkedWeekendDates() {
     // Ignore storage errors
   }
 }
+
+/**
+ * Records the final earnings for a weekday shift based on the provided
+ * elapsed hours.  This helper computes base, overtime and night
+ * differential using the same rules as in the updateDisplay function.
+ * It caps the base hours at the maximum paid hours (including grace
+ * period) and computes overtime beyond that threshold.  The result is
+ * stored in the completedWeekdayEarnings object keyed by the shift
+ * start date (YYYY-MM-DD) and persisted to localStorage.  This is
+ * invoked either when the user clicks the "End Shift" button or
+ * automatically when the grace period has passed without user
+ * interaction.
+ *
+ * @param {Date} shiftStart - The Date when the shift began.
+ * @param {number} elapsedHours - The total elapsed hours since shift start.
+ */
+function recordWeekdayEarnings(shiftStart, elapsedHours) {
+  // Do not record for weekends; weekend work is handled manually.
+  const day = shiftStart.getDay();
+  if (day === 0 || day === 6) return;
+  const paidHours = Math.max(elapsedHours - breakDurationHours, 0);
+  const maxHours = paidShiftHours + gracePeriodMinutes / 60;
+  const baseHrs = Math.min(paidHours, maxHours);
+  const otHrs = Math.max(paidHours - maxHours, 0);
+  let basePay, otPay;
+  // Weekday pay: regular hourly rate for base hours; 25% premium for OT
+  basePay = hourlyRate * baseHrs;
+  otPay = hourlyRate * overtimeMultiplier * otHrs;
+  const nightHrs = Math.min(baseHrs + otHrs, 8);
+  const nightPay = hourlyRate * nightDiffRate * nightHrs;
+  const totalPay = basePay + nightPay + otPay;
+  const dateStr = shiftStart.toISOString().split('T')[0];
+  completedWeekdayEarnings[dateStr] = totalPay;
+  saveCompletedWeekdayEarnings();
+}
+
+/**
+ * Automatically records the shift if the user has not clicked "End Shift"
+ * and the elapsed paid hours exceed the maximum paid hours allowed
+ * (including grace period).  This function ensures the recording is
+ * performed only once by checking the autoRecorded flag.  Overtime
+ * beyond the threshold will continue to display on screen but will
+ * not be included in the recorded total.
+ *
+ * @param {Date} shiftStart - The Date when the shift began.
+ * @param {number} elapsedHours - The total elapsed hours since shift start.
+ */
+function autoRecordIfPastGrace(shiftStart, elapsedHours) {
+  if (shiftEnded || autoRecorded) return;
+  const day = shiftStart.getDay();
+  // Skip weekends; weekend work is manually recorded.
+  if (day === 0 || day === 6) return;
+  const paidHours = Math.max(elapsedHours - breakDurationHours, 0);
+  const maxHours = paidShiftHours + gracePeriodMinutes / 60;
+  if (paidHours >= maxHours) {
+    recordWeekdayEarnings(shiftStart, elapsedHours);
+    autoRecorded = true;
+  }
+}
+
+// Before the window unloads (e.g., the user closes the tab or the computer
+// shuts down), automatically record the shift if it hasn't been ended.
+window.addEventListener('beforeunload', () => {
+  if (!shiftEnded && !autoRecorded) {
+    const now = getPhilippinesTime();
+    const start = getShiftStart(now);
+    const elapsedHours = Math.max((now.getTime() - start.getTime()) / (1000 * 60 * 60), 0);
+    autoRecordIfPastGrace(start, elapsedHours);
+  }
+});
 
 /**
  * Returns the current date/time in the Asia/Manila timezone.
@@ -450,9 +525,22 @@ function updateDisplay() {
   document.getElementById('ot-earnings').textContent = formatMoney(overtimeEarnings);
   // Update DOM elements (allowance and semi‑monthly metrics have been removed)
   document.getElementById('total-earnings').textContent = formatMoney(total);
+
+  // After updating the display, check if the shift has exceeded the
+  // allowed paid hours without an explicit end. If so, automatically
+  // record the shift once.  This ensures that if the user forgets to
+  // click "End Shift" and continues working, the earnings for the
+  // scheduled portion of the shift (including grace period) are still
+  // captured in the calendar.  Overtime beyond this threshold will
+  // continue to accumulate on screen but will not affect the recorded
+  // weekday earnings.
+  autoRecordIfPastGrace(shiftStart, effectiveElapsedHours);
 }
 
 // Initialize display and update every second
+// Call updateDisplay immediately and then every second.  The update
+// function also invokes autoRecordIfPastGrace() to handle automatic
+// recording of shifts when appropriate.
 updateDisplay();
 setInterval(updateDisplay, 1000);
 
