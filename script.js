@@ -87,6 +87,101 @@ function formatMoney(value) {
 }
 
 /**
+ * Returns an array of Date objects representing the current semi‑monthly pay
+ * period.  If today’s date is on or before the 15th, the period runs from
+ * the 1st to the 15th; otherwise it runs from the 16th to the last day
+ * of the month.
+ */
+function getCurrentPayPeriodDates() {
+  const now = getPhilippinesTime();
+  const year = now.getFullYear();
+  const month = now.getMonth();
+  let startDay = 1;
+  let endDay;
+  if (now.getDate() <= 15) {
+    endDay = 15;
+  } else {
+    startDay = 16;
+    endDay = new Date(year, month + 1, 0).getDate();
+  }
+  const dates = [];
+  for (let day = startDay; day <= endDay; day++) {
+    dates.push(new Date(year, month, day));
+  }
+  return dates;
+}
+
+/**
+ * Computes the expected earnings for a given date based on a 9‑hour shift.
+ * Applies weekend (rest‑day) multipliers for Saturdays and Sundays and
+ * includes the night differential for up to 8 hours between 10 PM and 6 AM.
+ */
+function calculateDailyEarningsForDate(date) {
+  const isWeekend = date.getDay() === 0 || date.getDay() === 6;
+  let base;
+  if (isWeekend) {
+    const weekendBaseHours = Math.min(paidShiftHours, 8);
+    const weekendExtraHours = Math.max(paidShiftHours - 8, 0);
+    base = hourlyRate * 1.3 * weekendBaseHours + hourlyRate * 1.69 * weekendExtraHours;
+  } else {
+    base = hourlyRate * paidShiftHours;
+  }
+  const nightHoursForDaily = Math.min(paidShiftHours, 8);
+  const night = hourlyRate * nightDiffRate * nightHoursForDaily;
+  return base + night;
+}
+
+/**
+ * Renders a simple calendar for the current pay period.  The calendar shows
+ * day numbers in a grid starting on Monday and includes day‑of‑week labels.
+ * Hovering over a day will display a tooltip with the estimated earnings
+ * calculated via calculateDailyEarningsForDate().  The current day is
+ * highlighted.
+ */
+function renderCalendar() {
+  const calendarGrid = document.getElementById('calendar-grid');
+  const calendarTitleEl = document.getElementById('calendar-title');
+  if (!calendarGrid || !calendarTitleEl) return;
+  const dates = getCurrentPayPeriodDates();
+  if (dates.length === 0) return;
+  const firstDate = dates[0];
+  const options = { month: 'long', year: 'numeric' };
+  calendarTitleEl.textContent = firstDate.toLocaleDateString('en-US', options);
+  calendarGrid.innerHTML = '';
+  // Add day of week labels
+  const dayNames = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
+  dayNames.forEach(name => {
+    const label = document.createElement('div');
+    label.className = 'day-label';
+    label.textContent = name;
+    calendarGrid.appendChild(label);
+  });
+  // Offset to align first date with correct weekday (Monday‑based)
+  const offset = (firstDate.getDay() + 6) % 7;
+  for (let i = 0; i < offset; i++) {
+    const empty = document.createElement('div');
+    empty.className = 'calendar-day';
+    empty.style.visibility = 'hidden';
+    calendarGrid.appendChild(empty);
+  }
+  const today = getPhilippinesTime();
+  dates.forEach(dateObj => {
+    const earnings = calculateDailyEarningsForDate(dateObj);
+    const cell = document.createElement('div');
+    cell.className = 'calendar-day';
+    if (dateObj.toDateString() === today.toDateString()) {
+      cell.classList.add('today');
+    }
+    cell.textContent = dateObj.getDate();
+    const tooltip = document.createElement('span');
+    tooltip.className = 'tooltip';
+    tooltip.textContent = `₱${earnings.toFixed(2)}`;
+    cell.appendChild(tooltip);
+    calendarGrid.appendChild(cell);
+  });
+}
+
+/**
  * Updates the real‑time earnings display. Detects weekend shifts and applies rest‑day rules.
  */
 function updateDisplay() {
@@ -165,4 +260,7 @@ document.addEventListener('DOMContentLoaded', () => {
       }
     });
   }
+
+  // Render the pay‑period calendar once the DOM is ready
+  renderCalendar();
 });

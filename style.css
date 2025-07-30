@@ -93,3 +93,75 @@ h1 {
   opacity: 0.6;
   cursor: not-allowed;
 }
+
+/* Calendar styles */
+.calendar-section {
+  margin-top: 2rem;
+}
+
+#calendar-title {
+  font-size: 1.2rem;
+  font-weight: 600;
+  margin-bottom: 0.5rem;
+  color: #111827; /* gray‑900 */
+  text-align: center;
+}
+
+.calendar-grid {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 0.3rem;
+}
+
+.calendar-day {
+  background-color: #f3f4f6; /* gray‑100 */
+  border-radius: 6px;
+  padding: 0.4rem;
+  text-align: center;
+  font-size: 0.75rem;
+  color: #374151; /* gray‑700 */
+  position: relative;
+  min-height: 40px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: default;
+}
+
+/* Highlight the current day */
+.calendar-day.today {
+  background-color: #e0e7ff; /* indigo‑100 */
+  border: 1px solid #c7d2fe; /* indigo‑200 */
+  font-weight: 600;
+}
+
+/* Tooltip for daily earnings */
+.calendar-day .tooltip {
+  position: absolute;
+  bottom: 110%;
+  left: 50%;
+  transform: translateX(-50%);
+  background-color: #111827; /* gray‑900 */
+  color: #ffffff;
+  padding: 0.3rem 0.5rem;
+  border-radius: 4px;
+  font-size: 0.65rem;
+  white-space: nowrap;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.2s ease;
+  z-index: 10;
+}
+
+.calendar-day:hover .tooltip {
+  opacity: 1;
+}
+
+/* Day of week labels */
+.day-label {
+  font-size: 0.7rem;
+  font-weight: 600;
+  color: #4b5563; /* gray‑600 */
+  text-align: center;
+  margin-bottom: 0.3rem;
+}
