@@ -162,6 +162,72 @@ function calculateDailyEarningsForDate(date) {
 }
 
 /**
+ * Calculates the earnings for a weekend (rest‑day) shift given the
+ * number of hours worked and the start time (HH:MM in 24‑hour format).
+ * Rest‑day pay rules: the first 8 hours are paid at 130% of the
+ * hourly rate, and any hours beyond 8 are paid at 169%【997854114004205†L460-L472】.
+ * Night differential (18% of hourly rate) applies to hours worked
+ * between 10 PM and 6 AM.  This function uses calculateNightHours() to
+ * determine the number of hours in that window.
+ *
+ * @param {number} hours - Total hours worked on the rest day.
+ * @param {string} startTime - Shift start time in HH:MM, 24‑hour format.
+ * @returns {number} Total earnings for the weekend shift.
+ */
+function calculateWeekendEarnings(hours, startTime) {
+  const weekendBaseHours = Math.min(hours, 8);
+  const weekendExtraHours = Math.max(hours - 8, 0);
+  const basePay = hourlyRate * 1.3 * weekendBaseHours + hourlyRate * 1.69 * weekendExtraHours;
+  const nightHours = calculateNightHours(hours, startTime);
+  const nightPay = hourlyRate * nightDiffRate * nightHours;
+  return basePay + nightPay;
+}
+
+/**
+ * Calculates the number of hours within a given shift that fall into
+ * the night differential period (10:00 PM to 6:00 AM).  The function
+ * handles shifts that may start before midnight and continue past it,
+ * or begin after midnight in the early morning.  It assumes the
+ * provided start time is on the same day as the weekend shift.
+ *
+ * @param {number} hours - Length of the shift in hours.
+ * @param {string} startTime - Start time in HH:MM, 24‑hour format.
+ * @returns {number} Total hours of the shift that qualify for the night differential.
+ */
+function calculateNightHours(hours, startTime) {
+  const parts = startTime.split(':');
+  let startH = parseInt(parts[0], 10);
+  let startM = parseInt(parts[1], 10);
+  if (isNaN(startH) || isNaN(startM)) return 0;
+  const startMinutes = startH * 60 + startM;
+  const endMinutes = startMinutes + hours * 60;
+  let nightMinutes = 0;
+  // Calculate overlap with 10 PM (22:00) to midnight (24:00) on the start day.
+  const nightStart1 = 22 * 60; // 1320
+  const nightEnd1 = 24 * 60;   // 1440
+  const day1End = Math.min(endMinutes, 1440);
+  nightMinutes += Math.max(0, Math.min(day1End, nightEnd1) - Math.max(startMinutes, nightStart1));
+  // Calculate overlap with midnight to 6 AM on the start or next day.
+  const nightStart2 = 0;
+  const nightEnd2 = 6 * 60; // 360
+  if (endMinutes > 1440) {
+    // Shift crosses midnight; compute minutes in next day
+    const minutesPastMidnight = endMinutes - 1440;
+    nightMinutes += Math.max(0, Math.min(minutesPastMidnight, nightEnd2) - nightStart2);
+    // If startMinutes < 360 (i.e., shift started in early morning), also add overlap on the start day
+    if (startMinutes < nightEnd2) {
+      nightMinutes += Math.min(nightEnd2, day1End) - startMinutes;
+    }
+  } else {
+    // Shift does not cross midnight but may start in early morning
+    if (startMinutes < nightEnd2) {
+      nightMinutes += Math.max(0, Math.min(endMinutes, nightEnd2) - startMinutes);
+    }
+  }
+  return nightMinutes / 60;
+}
+
+/**
  * Renders a simple calendar for the current pay period.  The calendar shows
  * day numbers in a grid starting on Monday and includes day‑of‑week labels.
  * Hovering over a day will display a tooltip with the estimated earnings

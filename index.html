@@ -63,19 +63,24 @@
         <button id="end-shift-btn">End Shift</button>
         <p class="footer">Based on a monthly salary of ₱28,000, a night shift premium of 18%, and overtime at 25% of the hourly rate.</p>
       </div>
-      <!-- The calendar wrapper contains two semi‑monthly calendars.  It sits
-           beside the earnings section on wide screens and below it on
-           narrow screens. -->
+      <!-- The calendar wrapper contains a single calendar block that holds
+           two pay‑period sections (1–15 and 16–end) stacked vertically.
+           This layout ensures the calendar appears as one cohesive box
+           rather than two side‑by‑side panels. -->
       <div class="calendar-wrapper">
-        <div class="calendar-block">
-          <h2 id="calendar-title-1"></h2>
-          <div class="calendar-grid" id="calendar-grid-1"></div>
-          <div class="period-total">Period Total: <span id="period-total-1">₱0.00</span></div>
-        </div>
-        <div class="calendar-block">
-          <h2 id="calendar-title-2"></h2>
-          <div class="calendar-grid" id="calendar-grid-2"></div>
-          <div class="period-total">Period Total: <span id="period-total-2">₱0.00</span></div>
+        <div class="calendar-block single">
+          <!-- First pay period (1–15) section -->
+          <div class="period-section">
+            <h2 id="calendar-title-1"></h2>
+            <div class="calendar-grid" id="calendar-grid-1"></div>
+            <div class="period-total">Period Total: <span id="period-total-1">₱0.00</span></div>
+          </div>
+          <!-- Second pay period (16–end) section -->
+          <div class="period-section">
+            <h2 id="calendar-title-2"></h2>
+            <div class="calendar-grid" id="calendar-grid-2"></div>
+            <div class="period-total">Period Total: <span id="period-total-2">₱0.00</span></div>
+          </div>
         </div>
       </div>
     </div>

@@ -124,22 +124,37 @@ h1 {
 /* Calendar wrapper takes up the remaining space beside the fixed-width
    earnings section.  It grows as needed and wraps its internal
    calendar blocks when the viewport is narrow. */
+/* The calendar wrapper now holds a single calendar block instead of two.
+   It still flexes to take up the remaining horizontal space beside the
+   earnings section, but it does not wrap its children horizontally. */
 .calendar-wrapper {
   margin-top: 0;
   display: flex;
-  flex-wrap: wrap;
-  gap: 1rem;
+  flex-direction: column;
   flex: 1 1 0;
-  justify-content: space-between;
 }
 
+/* Calendar block styling.  The `.single` modifier indicates this block
+   contains both pay‑period sections stacked vertically rather than
+   two separate blocks.  It expands to full width within the
+   calendar wrapper. */
 .calendar-block {
   background-color: #f9fafb; /* gray‑50 */
   border-radius: 10px;
   padding: 1rem;
-  flex: 1 1 45%;
-  min-width: 220px;
   box-shadow: 0 4px 8px rgba(0, 0, 0, 0.05);
+}
+.calendar-block.single {
+  flex: 1 1 100%;
+  min-width: 220px;
+}
+
+/* Each period section within the calendar block is separated by a border
+   and spacing.  The last section has no border. */
+.period-section:not(:last-child) {
+  margin-bottom: 1rem;
+  padding-bottom: 1rem;
+  border-bottom: 1px solid #e5e7eb; /* gray‑200 */
 }
 
 /* Total summary beneath each calendar */
