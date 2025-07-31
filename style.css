@@ -19,8 +19,11 @@ body {
   /* Increase the maximum width to accommodate side‑by‑side layout.  Use
      auto margins to center the container horizontally within the page
      instead of leaving extra space on the right. */
-  max-width: 1200px;
-  width: 95%;
+  /* Center the container and prevent it from spanning nearly the full
+     viewport width.  The max‑width keeps the card from growing too
+     wide, and the auto width lets it shrink to fit its contents. */
+  max-width: 1000px;
+  width: 100%;
   margin-left: auto;
   margin-right: auto;
   box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);

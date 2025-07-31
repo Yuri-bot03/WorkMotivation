@@ -114,13 +114,24 @@ function recordWeekdayEarnings(shiftStart, elapsedHours) {
   const maxHours = paidShiftHours + gracePeriodMinutes / 60;
   const baseHrs = Math.min(paidHours, maxHours);
   const otHrs = Math.max(paidHours - maxHours, 0);
-  let basePay, otPay;
-  // Weekday pay: regular hourly rate for base hours; 25% premium for OT
-  basePay = hourlyRate * baseHrs;
-  otPay = hourlyRate * overtimeMultiplier * otHrs;
+  // Determine which semi‑monthly period the shift falls into to compute
+  // the daily base pay (halfSalary divided by the number of weekdays in
+  // that period).
+  const dayOfMonth = shiftStart.getDate();
+  const period = dayOfMonth <= 15 ? 1 : 2;
+  const year = shiftStart.getFullYear();
+  const month = shiftStart.getMonth();
+  const periodStart = new Date(year, month, period === 1 ? 1 : 16);
+  const periodEnd = new Date(year, month, period === 1 ? 15 : new Date(year, month + 1, 0).getDate());
+  const weekdayCount = getWeekdaysBetween(periodStart, periodEnd);
+  const dailyBase = halfSalary / weekdayCount;
+  // Weekday pay consists of the fixed daily base plus night differential
+  // for the hours between 10 PM and 6 AM.  Overtime hours beyond the
+  // scheduled paid hours are paid with a 25% premium on the hourly rate.
   const nightHrs = Math.min(baseHrs + otHrs, 8);
   const nightPay = hourlyRate * nightDiffRate * nightHrs;
-  const totalPay = basePay + nightPay + otPay;
+  const otPay = hourlyRate * overtimeMultiplier * otHrs;
+  const totalPay = dailyBase + nightPay + otPay;
   const dateStr = shiftStart.toISOString().split('T')[0];
   completedWeekdayEarnings[dateStr] = totalPay;
   saveCompletedWeekdayEarnings();
@@ -270,17 +281,30 @@ function calculateDailyEarningsForDate(date) {
     const { hours, startTime } = details;
     return calculateWeekendEarnings(hours, startTime);
   }
-  // Weekday dates: use fixed paid shift hours
-  // If the shift for this date has been completed and recorded, return the
-  // stored value; otherwise compute the expected earnings for a full 9‑hour
-  // shift (including night differential).
+  // Weekday dates: if an actual shift has been recorded via the End Shift
+  // button or automatic recording, return that recorded value.  Otherwise
+  // compute the expected daily earnings by dividing the fixed semi‑monthly
+  // salary across the number of weekdays in the appropriate pay period.
   if (completedWeekdayEarnings.hasOwnProperty(dateStr)) {
     return completedWeekdayEarnings[dateStr];
   }
-  const base = hourlyRate * paidShiftHours;
+  // Determine which semi‑monthly period this date falls into.
+  const dayOfMonth = date.getDate();
+  const period = dayOfMonth <= 15 ? 1 : 2;
+  const year = date.getFullYear();
+  const month = date.getMonth();
+  const periodStart = new Date(year, month, period === 1 ? 1 : 16);
+  const periodEnd = new Date(year, month, period === 1 ? 15 : new Date(year, month + 1, 0).getDate());
+  const weekdayCount = getWeekdaysBetween(periodStart, periodEnd);
+  // Spread the fixed half‑salary evenly across the weekdays of the period.
+  const dailyBase = halfSalary / weekdayCount;
+  // Expected night differential for a full shift: 18% of the hourly rate
+  // applied to the hours between 10 PM and 6 AM (8 hours).  Overtime and
+  // mid‑shift premiums are not included here because the base pay already
+  // accounts for the 9 paid hours.
   const nightHoursForDaily = Math.min(paidShiftHours, 8);
   const night = hourlyRate * nightDiffRate * nightHoursForDaily;
-  return base + night;
+  return dailyBase + night;
 }
 
 /**
@@ -461,25 +485,11 @@ function renderCalendar(period, titleId, gridId, totalId) {
     }
     calendarGrid.appendChild(cell);
   });
-  // Adjust the period total to incorporate the user's fixed semi‑monthly
-  // salary and the de minimis allowance.  The daily earnings above
-  // include base pay for each weekday (hourlyRate * paidShiftHours),
-  // but the actual base pay per period is fixed regardless of the
-  // number of weekdays.  To avoid double counting, compute the total
-  // base pay assumed by the calendar (basePaySum) and replace it
-  // with the fixed halfSalary plus the de minimis (only on the first
-  // period).  Weekend earnings and recorded overtime remain intact.
-  {
-    const isFirstPeriod = period === 1;
-    const nowDate = getPhilippinesTime();
-    const y = nowDate.getFullYear();
-    const m = nowDate.getMonth();
-    const periodStart = new Date(y, m, isFirstPeriod ? 1 : 16);
-    const periodEnd = new Date(y, m, isFirstPeriod ? 15 : new Date(y, m + 1, 0).getDate());
-    const weekdayCount = getWeekdaysBetween(periodStart, periodEnd);
-    const basePaySum = hourlyRate * paidShiftHours * weekdayCount;
-    const lumpsTotal = halfSalary + (isFirstPeriod ? deMinimisMonthly : 0);
-    periodTotal = periodTotal - basePaySum + lumpsTotal;
+  // Add the de minimis allowance to the first pay period total.  The
+  // calendar cells already incorporate the fixed semi‑monthly salary on a
+  // per‑weekday basis, so there is no need to adjust the base pay here.
+  if (period === 1) {
+    periodTotal += deMinimisMonthly;
   }
   // Update total display for this period
   totalEl.textContent = `₱${periodTotal.toFixed(2)}`;
