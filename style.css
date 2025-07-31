@@ -22,8 +22,11 @@ body {
   /* Center the container and prevent it from spanning nearly the full
      viewport width.  The max‑width keeps the card from growing too
      wide, and the auto width lets it shrink to fit its contents. */
-  max-width: 1000px;
-  width: 100%;
+  /* Restrict the overall container to a narrower width and center it.  A
+     lower max-width and percentage based width help eliminate the large
+     band of empty space to the right on desktop displays. */
+  max-width: 900px;
+  width: 90%;
   margin-left: auto;
   margin-right: auto;
   box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
@@ -145,7 +148,11 @@ h1 {
   /* Limit the calendar width so it doesn't dominate the layout.  A
      narrower maximum width keeps the calendar compact and improves
      readability on larger screens. */
-  max-width: 550px;
+  /* Further reduce the calendar's maximum width so it doesn't appear as
+     wide relative to the earnings panel.  This change helps the
+     calendar sit comfortably next to the card without spilling too
+     far toward the right edge of the page. */
+  max-width: 500px;
   width: 100%;
   /* Remove the extra margin on the left.  The gap on the parent flex
      container will provide separation between the earnings card and
