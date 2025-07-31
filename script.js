@@ -15,8 +15,21 @@ const nightDiffRate = 0.18;            // Night shift premium (applies 10 PM–
 const overtimeMultiplier = 1.25;       // Weekday overtime premium【116724529657621†L175-L179】
 // A de minimis allowance exists but is no longer displayed on the
 // real‑time dashboard.  It is applied only in semi‑monthly calendar totals.
-const deMinimisMonthly = 2800;
-
+const deMinimisMonthly = 280
+  // Semi-monthly deductions (employee share) for taxes and mandatory contributions.
+// These are deducted from each semi-monthly pay period but not from daily earnings.
+const annualSalary = monthlySalary * 12;
+const annualTaxExcess = Math.max(annualSalary - 250000, 0);
+const annualTax = annualTaxExcess * 0.15;
+const semiMonthlyTax = annualTax / 24;
+const monthlySSS = monthlySalary * 0.05;
+const semiMonthlySSS = monthlySSS / 2;
+const monthlyPhilHealthEmployee = Math.min(Math.max(monthlySalary * 0.025, 250), 1250);
+const semiMonthlyPhilHealth = monthlyPhilHealthEmployee / 2;
+const monthlyPagIbig = Math.min(monthlySalary * 0.02, 200);
+const semiMonthlyPagIbig = monthlyPagIbig / 2;
+const semiMonthlyDeductions = semiMonthlyTax + semiMonthlySSS + semiMonthlyPhilHealth + semiMonthlyPagIbig;
+//
 // Shift configuration
 const paidShiftHours = 9;              // Total paid hours per shift (8 regular + 1 extra)
 const breakDurationHours = 1;          // Unpaid break during the shift
@@ -488,11 +501,14 @@ function renderCalendar(period, titleId, gridId, totalId) {
   // Add the de minimis allowance to the first pay period total.  The
   // calendar cells already incorporate the fixed semi‑monthly salary on a
   // per‑weekday basis, so there is no need to adjust the base pay here.
-  if (period === 1) {
-    periodTotal += deMinimisMonthly;
-  }
-  // Update total display for this period
-  totalEl.textContent = `₱${periodTotal.toFixed(2)}`;
+      if (period === 1) {
+      periodTotal += deMinimisMonthly;
+    }
+    // Subtract semi-monthly deductions (employee share) and compute net pay for this period
+    const netTotal = periodTotal - semiMonthlyDeductions;
+    // Update total display for this period with net pay
+    totalEl.textContent = String.fromCharCode(8369) + netTotal.toFixed(2);
+
 }
 
 /**
