@@ -16,9 +16,13 @@ body {
   backdrop-filter: blur(6px);
   border-radius: 12px;
   padding: 2rem 3rem;
-  /* Increase the maximum width to accommodate side‑by‑side layout */
+  /* Increase the maximum width to accommodate side‑by‑side layout.  Use
+     auto margins to center the container horizontally within the page
+     instead of leaving extra space on the right. */
   max-width: 1200px;
   width: 95%;
+  margin-left: auto;
+  margin-right: auto;
   box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
 }
 
@@ -140,7 +144,11 @@ h1 {
      readability on larger screens. */
   max-width: 550px;
   width: 100%;
-  margin-left: 2rem;
+  /* Remove the extra margin on the left.  The gap on the parent flex
+     container will provide separation between the earnings card and
+     calendar, ensuring the layout remains centered without unused
+     space on the right. */
+  margin-left: 0;
 }
 
 /* Calendar block styling.  The `.single` modifier indicates this block
