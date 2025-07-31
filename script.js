@@ -1,7 +1,13 @@
 // JavaScript for real‑time earnings calculator with weekend rules and semi‑monthly pay calculations
 
 // Compensation constants
-const monthlySalary = 28000;           // Monthly fixed salary (PHP)
+// Updated monthly salary to reflect the user's fixed semi‑monthly pay of
+// ₱14,100 per period (₱28,200 per month).  The halfSalary constant
+// represents the fixed base pay for each semi‑monthly period.  The
+// hourlyRate derived from the monthlySalary is still used to compute
+// premiums such as night differential and overtime.
+const monthlySalary = 28200;           // Monthly fixed salary (PHP)
+const halfSalary = monthlySalary / 2;  // Fixed pay per semi‑monthly period (₱14,100)
 const workingDaysPerMonth = 26;        // Average working days used to derive hourly rate【504998637967793†L320-L324】
 const hoursPerDay = 8;                 // Standard hours for computing hourly rate
 const hourlyRate = monthlySalary / workingDaysPerMonth / hoursPerDay;
@@ -455,6 +461,26 @@ function renderCalendar(period, titleId, gridId, totalId) {
     }
     calendarGrid.appendChild(cell);
   });
+  // Adjust the period total to incorporate the user's fixed semi‑monthly
+  // salary and the de minimis allowance.  The daily earnings above
+  // include base pay for each weekday (hourlyRate * paidShiftHours),
+  // but the actual base pay per period is fixed regardless of the
+  // number of weekdays.  To avoid double counting, compute the total
+  // base pay assumed by the calendar (basePaySum) and replace it
+  // with the fixed halfSalary plus the de minimis (only on the first
+  // period).  Weekend earnings and recorded overtime remain intact.
+  {
+    const isFirstPeriod = period === 1;
+    const nowDate = getPhilippinesTime();
+    const y = nowDate.getFullYear();
+    const m = nowDate.getMonth();
+    const periodStart = new Date(y, m, isFirstPeriod ? 1 : 16);
+    const periodEnd = new Date(y, m, isFirstPeriod ? 15 : new Date(y, m + 1, 0).getDate());
+    const weekdayCount = getWeekdaysBetween(periodStart, periodEnd);
+    const basePaySum = hourlyRate * paidShiftHours * weekdayCount;
+    const lumpsTotal = halfSalary + (isFirstPeriod ? deMinimisMonthly : 0);
+    periodTotal = periodTotal - basePaySum + lumpsTotal;
+  }
   // Update total display for this period
   totalEl.textContent = `₱${periodTotal.toFixed(2)}`;
 }
