@@ -15,7 +15,7 @@ const nightDiffRate = 0.18;            // Night shift premium (applies 10 PM–
 const overtimeMultiplier = 1.25;       // Weekday overtime premium【116724529657621†L175-L179】
 // A de minimis allowance exists but is no longer displayed on the
 // real‑time dashboard.  It is applied only in semi‑monthly calendar totals.
-const deMinimisMonthly = 280
+const deMinimisMonthly = 2800
   // Semi-monthly deductions (employee share) for taxes and mandatory contributions.
 // These are deducted from each semi-monthly pay period but not from daily earnings.
 const annualSalary = monthlySalary * 12;
