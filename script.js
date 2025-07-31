@@ -506,8 +506,14 @@ function renderCalendar(period, titleId, gridId, totalId) {
     }
     // Subtract semi-monthly deductions (employee share) and compute net pay for this period
     const netTotal = periodTotal - semiMonthlyDeductions;
-    // Update total display for this period with net pay
-    totalEl.textContent = String.fromCharCode(8369) + netTotal.toFixed(2);
+    /// Update total display for this period with detailed deductions and net pay
+  totalEl.innerHTML =
+    'Tax: ' + String.fromCharCode(8369) + semiMonthlyTax.toFixed(2) + '<br>' +
+    'SSS: ' + String.fromCharCode(8369) + semiMonthlySSS.toFixed(2) + '<br>' +
+    'PhilHealth: ' + String.fromCharCode(8369) + semiMonthlyPhilHealth.toFixed(2) + '<br>' +
+    'Pag-IBIG: ' + String.fromCharCode(8369) + semiMonthlyPagIbig.toFixed(2) + '<br>' +
+    'Net: ' + String.fromCharCode(8369) + netTotal.toFixed(2);
+
 
 }
 
