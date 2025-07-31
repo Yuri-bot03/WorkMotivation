@@ -47,6 +47,8 @@ let endedElapsedHours = 0;
 // detects that the grace period has passed or the page is closing.  This
 // prevents duplicate entries in the calendar.
 let autoRecorded = false;
+let currentShiftStart = null;
+
 
 // Object mapping weekday dates (YYYY‑MM‑DD) to actual earnings recorded when
 // the shift is ended.  This allows the calendar to display the real
@@ -532,7 +534,16 @@ function renderCalendars() {
  */
 function updateDisplay() {
   const now = getPhilippinesTime();
-  const shiftStart = getShiftStart(now);
+  let shiftStart = getShiftStart(now);
+      if (!shiftEnded) {
+        if (!currentShiftStart) {
+            currentShiftStart = shiftStart;
+        }
+    } else {
+        currentShiftStart = null;
+    }
+    shiftStart = currentShiftStart || shiftStart;
+  
   // Elapsed hours since shift start (in Philippine time)
   const elapsedHours = Math.max((now.getTime() - shiftStart.getTime()) / (1000 * 60 * 60), 0);
   // Freeze elapsed hours when shift is manually ended
